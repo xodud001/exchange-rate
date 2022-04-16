@@ -1,0 +1,19 @@
+* {
+    box-sizing: border-box;
+    font-family: 'Noto Sans KR', sans-serif !important;
+    list-style:none;
+}
+
+.body__container{
+    width: 100%;
+}
+
+.section{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.inner{
+    width: 1200px;
+}
