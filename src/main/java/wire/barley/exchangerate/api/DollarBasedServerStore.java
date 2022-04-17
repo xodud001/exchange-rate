@@ -41,7 +41,7 @@ public class DollarBasedServerStore implements ExchangeRateStore{
         params.addAll(info.currenciesParam());
 
         CurrencyLayer currencyLayer = callApiServer(point.getUri(), params);
-
+        log.info("api call result={}", currencyLayer);
         Quotes quotes = currencyLayer.getQuotes();
 
         if(quotes == null){

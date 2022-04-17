@@ -4,87 +4,120 @@
     <meta charset="UTF-8">
     <title th:text="#{label.title}">환율 계산</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reset-css@5.0.1/reset.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css"
+          integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script src="http://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.12.4.min.js"></script>
     <script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
-    <link rel="stylesheet" th:href="@{/css/exchangeForm.css}">
+    <link rel="stylesheet"
+          href="../static/css/exchangeForm.css"
+          th:href="@{/css/exchangeForm.css}">
 </head>
 <body>
 <div id="body__container">
-    <header>
-        <h1 class="title" th:text="#{label.title}">환율 계산</h1>
-    </header>
-    <form action="/exchange" method="post">
-        <div>
-            <span th:text="#{label.exchange.from}">송금국가</span>:
-            <span th:text="${rates[0].from}"> 미국(USD)</span>
+    <main class="container">
+        <header>
+            <h1 class="title" th:text="#{label.title}">환율 계산</h1>
+        </header>
+        <div class="field-error global-error" th:if="${rates.isEmpty()}">
+            환율 정보를 가져오는데 실패하였습니다.
         </div>
-        <label>
-            <span th:text="#{label.exchange.to}">수취국가</span>:
-            <select id="rateCode" name="rateCode" class="form-select"  onchange="changeRateSelect()" style="display: inline-block">
-                <option value="">==수취국가 선택==</option>
-                <option th:each="rate : ${rates}" th:value="${rate.toCode}"
-                        th:text="${rate.to}"></option>
-            </select>
-        </label>
-        <div>
-            <span th:text="#{label.exchange.rate}">환율</span>:
-            <span id="display">수취국가를 선택해주세요</span>
-        </div>
-        <div>
-            <span th:text="#{label.exchange.amount}">송금액</span>:
-            <input id="amount" name="amount" type="text" placeholder="$0 ~ $10,000"/>
-            <span th:text="${rates[0].fromCode}">USD</span>:
-        </div>
-        <a class="btn btn-primary" th:text="#{button.submit}" onClick="calExchange();"></a>
-        <div id="result"></div>
-    </form>
+        <form id="main-form" action="/exchange" method="post" th:if="${not rates.isEmpty()}" th:object="${form}">
+            <div class="from">
+                <label for="from" class="form-label" th:text="#{label.exchange.from}">송금국가</label>
+                <input type="text" class="form-control form-control-sm" id="from" th:value="${rates[0].from}" disabled>
+            </div>
+            <div class="to">
+                <label for="rateCode" class="form-label" th:text="#{label.exchange.to}">수취국가</label>
+                <select id="rateCode" name="rateCode" class="form-select form-select-sm" onchange="changeRateSelect()"
+                        style="display: inline-block" th:errorclass="field-error">
+
+                    <option th:each="rate : ${rates}" th:value="${rate.toCode}"
+                            th:text="${rate.to}" th:selected="${rate.toCode}==*{rateCode}"></option>
+                    <option value="ERROR">수취국 선택 실패</option>
+                    <option value="USD">계산 에러용</option>
+                </select>
+                <div class="field-error" th:errors="*{rateCode}">
+                    수취국가 선택 실패
+                </div>
+            </div>
+            <div class="rate">
+                <label for="display" class="form-label" th:text="#{label.exchange.rate}">환율</label>
+                <input type="text" class="form-control form-control-sm" id="display" value="수취국가를 선택해주세요" disabled>
+            </div>
+            <div class="send">
+                <label for="amount" class="form-label" th:text="#{label.exchange.amount}">송금액</label>
+                <div class="input-group input-group-sm">
+                    <input class="form-control form-control-sm" id="amount" name="amount"
+                           th:value="*{amount}" th:errorclass="field-error" type="text" placeholder="$0 ~ $10,000"/>
+                    <span class="input-group-text" th:text="${rates[0].fromCode}">USD</span>
+                </div>
+                <span></span>
+                <div class="field-error" th:errors="*{amount}">
+                    금액 오류
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary submit" th:text="#{button.submit}" onClick="calExchange();">
+                계산하기
+            </button>
+            <!--        <a class="btn btn-primary" th:text="#{button.submit}" onClick="calExchange();"></a>-->
+
+            <div class="result-box" th:if="${resultMessage} != null">
+                수취 금액은 <span id="result" th:text="${resultMessage}">12,212,241.24 KRW</span> 입니다.
+            </div>
+            <div th:if="${#fields.hasGlobalErrors()}">
+                <p class="field-error" th:each="err : ${#fields.globalErrors()}" th:text="${err}">전체 오류 메시지</p>
+            </div>
+        </form>
+
+    </main>
 </div>
 <script defer th:inline="javascript">
-    function changeRateSelect(){
+    function changeRateSelect() {
         const rates = [[${rates}]];
         const rateSelect = document.getElementById("rateCode");
         const display = document.getElementById("display");
 
-        if (rateSelect.selectedIndex > 0) {
-            display.innerText = rates[rateSelect.selectedIndex-1].rateMessage;
+        if(rateSelect.selectedIndex >= rates.length){
+            display.value = "수취국가를 선택해주세요"
         }else{
-            display.innerText = '수취국가를 선택해주세요';
+            display.value = rates[rateSelect.selectedIndex].rateMessage;
         }
+
     }
 
-    function calExchange(){
+    function calExchange() {
         const rates = [[${rates}]];
         const rateSelect = document.getElementById("rateCode");
         const amount = document.getElementById("amount");
         const result = document.getElementById("result");
+        const form = document.getElementById("main-form");
 
-        if(rateSelect.selectedIndex === 0){
-            alert("수취국가를 선택해주세요");
-            return;
-        }
+        // if(rateSelect.selectedIndex === 0){
+        //     alert("수취국가를 선택해주세요");
+        //     return;
+        // }
 
-        if(Number(amount.value) < 0){
-            alert("$0 보다 작은 금액은 입력하실 수 없습니다")
-            return;
-        }
-        
-        if(Number(amount.value) > 10000){
-            alert("$10,000 보다 큰 금액은 입력하실 수 없습니다")
-            return;
-        }
+        // if(Number(amount.value) < 0){
+        //     alert("$0 보다 작은 금액은 입력하실 수 없습니다")
+        //     return;
+        // }
 
-        const calAmount = (amount.value * rates[rateSelect.selectedIndex - 1].rate).toLocaleString(undefined, {maximumFractionDigits: 2});
+        // if(Number(amount.value) > 10000){
+        //     alert("$10,000 보다 큰 금액은 입력하실 수 없습니다")
+        //     return;
+        // }
 
-        result.innerText = `수취금액은 ${calAmount} ${rates[rateSelect.selectedIndex - 1].toCode}입니다`
+        form.submit();
+        // const calAmount = (amount.value * rates[rateSelect.selectedIndex - 1].rate).toLocaleString(undefined, {maximumFractionDigits: 2});
+        // result.innerText = `수취금액은 ${calAmount} ${rates[rateSelect.selectedIndex - 1].toCode}입니다`
     }
 
-    function checkInput(){
+    function checkInput() {
         const replaceNotInt = /[^0-9]/gi;
 
-        $(document).ready(function(){
-            $("#amount").on("focusout", function() {
+        $(document).ready(function () {
+            $("#amount").on("focusout", function () {
                 let x = $(this).val();
                 if (x.length > 0) {
                     if (x.match(replaceNotInt)) {
@@ -92,14 +125,14 @@
                     }
                     $(this).val(x);
                 }
-            }).on("keyup", function() {
+            }).on("keyup", function () {
                 $(this).val($(this).val().replace(replaceNotInt, ""));
             });
 
         });
     }
 
-    checkInput();
+    // checkInput();
     changeRateSelect();
 </script>
 </body>
